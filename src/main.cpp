@@ -42,7 +42,7 @@ void setup()
   Serial.print("Connecting to ");
   Serial.println(ssid);
   /*connect to wifi*/
-  WiFi.mode(WIFI_STA); // STA for station which is client
+  WiFi.mode(WIFI_STA); // STA = station, e.g. client
   WiFi.begin(ssid);    //(ssid, password); if you need a password
   /*Wait for a connection*/
   while (WiFi.status() != WL_CONNECTED)
@@ -91,7 +91,9 @@ void loop()
     {
       uint8_t ch = static_cast<char>(client.read());
       if (mavlink_parse_char(MAVLINK_COMM_0, ch, &msg, &status))
-      {
+      { 
+        //This switch will identify a message based on it's ID and then proscess it acordingly
+        //for common messages : https://mavlink.io/en/messages/common.html
         switch (msg.msgid)
         {
         case MAVLINK_MSG_ID_GLOBAL_POSITION_INT:
@@ -99,7 +101,7 @@ void loop()
           mavlink_msg_global_position_int_decode(&msg, &gpi);
           Serial.println("----GLOBAL_POSITION_INT------");
           /*The incoming lat/lon data is an int (eg. 72.324234 deg is 72324234) so we
-          convert it to a double and add the decimal for later mathsing*/
+          convert it to a double and add the decimal by dy dividing by a big old number*/
           double lat_deg = (double)gpi.lat / (double)10000000;
           double lon_deg = (double)gpi.lon / (double)10000000;
           double alt_mm = (double)gpi.alt;
@@ -109,17 +111,15 @@ void loop()
           printDouble(lon_deg, 1000000);
           Serial.print("alt: ");
           printDouble(alt_mm, 1000000);
-          pan_angle = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
-          if (pan_angle >= 90){pan_angle = 90;}
-          if (pan_angle <= -90){pan_angle = -90;}
-          pan_servo.write(lround(90+pan_angle*2));
-          //Saves initial gps coordinates as a reference, then uses them to calculate relitive altitude angle
+
+          //Saves initial gps coordinates as a reference
           if (is_first_loop)
           {
             INITIAL_LAT = lat_deg;
             INITIAL_LON = lon_deg;
             INITIAL_ALT = alt_mm;
             is_first_loop = false;
+            break;
           }
           else
           {
@@ -135,13 +135,14 @@ void loop()
             if (pan_angle <= -90){pan_angle = -90;}
 
             tilt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-            Serial.println("SERVOPITCH:");
+            Serial.println("SERVO TILT:");
             Serial.print(tilt_angle); 
-            if (tilt_angle >= 90){tilt_angle = 90;}//The servo accepts 0-180 as an input but only actualy moves 0-90, this sets 45 as the centre
+            if (tilt_angle >= 90){tilt_angle = 90;}
             if (tilt_angle <= -90){tilt_angle = -90;}
             tilt_servo.write(lround(90-tilt_angle*2));
             pan_servo.write(lround(90+pan_angle*2));
           }
+          break;
           /*Get Raw satellite data */
           // TODO: why is this giving me random values? Use this to only start main loop once enough sats have been found
           // case MAVLINK_MSG_ID_GPS_RAW_INT:
@@ -157,7 +158,6 @@ void loop()
   /*if the code reaches this point, the conection has been lost and the loop will restart*/
   Serial.println();
   Serial.println("-Connection to TX Interupted, Waiting for Bananas-");
-
-  /*Waits for short time, avoids Ddos-ing the TX*/
+  /*Waits to avoid Ddos-ing the TX*/
   delay(30);
 }
