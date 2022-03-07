@@ -9,8 +9,10 @@
 
 const char *password = STAPSK;
 const char *ssid = STASSID;
+// the ip and port to connect to on the TSB Tango II to get a MAVlink stream
 const char *host = "192.168.4.1";
 const uint16_t port = 5760;
+// comp and sys ID are used in mavlink messages so each system knows who its talking too.
 const uint16_t CC_SYSID = 245;
 const uint16_t CC_COMPID = 1;
 double lat_deg;
@@ -22,6 +24,7 @@ double INITIAL_LON = 172.635182;
 double pan_angle = 90;
 double tilt_angle = 90;
 bool is_first_loop = true;
+
 WiFiClient client;
 mavlink_message_t msg;
 mavlink_status_t status;
@@ -29,6 +32,7 @@ uint8_t len;
 uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 Servo pan_servo;
 Servo tilt_servo;
+
 /*----------------------SETUP-----------------------*/
 void setup()
 {
@@ -91,9 +95,9 @@ void loop()
     {
       uint8_t ch = static_cast<char>(client.read());
       if (mavlink_parse_char(MAVLINK_COMM_0, ch, &msg, &status))
-      { 
-        //This switch will identify a message based on it's ID and then proscess it acordingly
-        //for common messages : https://mavlink.io/en/messages/common.html
+      {
+        // This switch will identify a message based on it's ID and then proscess it acordingly
+        // for common messages : https://mavlink.io/en/messages/common.html
         switch (msg.msgid)
         {
         case MAVLINK_MSG_ID_GLOBAL_POSITION_INT:
@@ -112,7 +116,7 @@ void loop()
           Serial.print("alt: ");
           printDouble(alt_mm, 1000000);
 
-          //Saves initial gps coordinates as a reference
+          // Saves initial gps coordinates as a reference
           if (is_first_loop)
           {
             INITIAL_LAT = lat_deg;
@@ -129,20 +133,37 @@ void loop()
             with a bit of fangling to make up for the servo motors being a bit shit*/
             pan_angle = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
             Serial.println("SERVO PAN:");
-            Serial.print(pan_angle); 
-            //The servo accepts 0-180 as an input but only actualy moves 0-90 degrees, this makes 45 the equivilent of 0 degrees
-            if (pan_angle >= 90){pan_angle = 90;}
-            if (pan_angle <= -90){pan_angle = -90;}
+            Serial.print(pan_angle);
+            // The servo accepts 0-180 as an input but only actualy moves 0-90 degrees, this makes 45 the equivilent of 0 degrees
+            if (pan_angle >= 90)
+            {
+              pan_angle = 90;
+              Serial.println("SERVO PAN MAX RANGE");
+            }
+            if (pan_angle <= -90)
+            {
+              pan_angle = -90;
+              Serial.println("SERVO PAN MAX RANGE");
+            }
 
             tilt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
             Serial.println("SERVO TILT:");
-            Serial.print(tilt_angle); 
-            if (tilt_angle >= 90){tilt_angle = 90;}
-            if (tilt_angle <= -90){tilt_angle = -90;}
-            tilt_servo.write(lround(90-tilt_angle*2));
-            pan_servo.write(lround(90+pan_angle*2));
+            Serial.print(tilt_angle);
+            if (tilt_angle >= 90)
+            {
+              tilt_angle = 90;
+              Serial.println("SERVO TILT MAX RANGE");
+            }
+            if (tilt_angle <= -90)
+            {
+              tilt_angle = -90;
+              Serial.println("SERVO TILT MAX RANGE");
+            }
+            tilt_servo.write(lround(90 - tilt_angle * 2));
+            pan_servo.write(lround(90 + pan_angle * 2));
           }
           break;
+
           /*Get Raw satellite data */
           // TODO: why is this giving me random values? Use this to only start main loop once enough sats have been found
           // case MAVLINK_MSG_ID_GPS_RAW_INT:
