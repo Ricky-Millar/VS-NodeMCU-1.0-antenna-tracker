@@ -123,12 +123,24 @@ void loop()
           }
           else
           {
+            /*----------------------------SERVO WANGLING------------------------------------*/
+            /*The initial coordinates are compared with the drones coordinates to calculate
+            the relitive angles between them, those numbers are then sent to the servo motors
+            with a bit of fangling to make up for the servo motors being a bit shit*/
+            pan_angle = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
+            Serial.println("SERVO PAN:");
+            Serial.print(pan_angle); 
+            //The servo accepts 0-180 as an input but only actualy moves 0-90 degrees, this makes 45 the equivilent of 0 degrees
+            if (pan_angle >= 90){pan_angle = 90;}
+            if (pan_angle <= -90){pan_angle = -90;}
+
             tilt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
             Serial.println("SERVOPITCH:");
             Serial.print(tilt_angle); 
             if (tilt_angle >= 90){tilt_angle = 90;}//The servo accepts 0-180 as an input but only actualy moves 0-90, this sets 45 as the centre
             if (tilt_angle <= -90){tilt_angle = -90;}
             tilt_servo.write(lround(90-tilt_angle*2));
+            pan_servo.write(lround(90+pan_angle*2));
           }
           /*Get Raw satellite data */
           // TODO: why is this giving me random values? Use this to only start main loop once enough sats have been found
