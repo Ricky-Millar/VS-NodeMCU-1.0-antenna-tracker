@@ -28,7 +28,7 @@ double pan_angle = 90;
 double tilt_angle = 90;
 bool is_first_loop = true;
 int test = 1;
-
+bool gps_fix = false;
 WiFiClient client;
 mavlink_message_t msg;
 mavlink_status_t status;
@@ -59,40 +59,45 @@ void simulate_flight()
   case 1:
     Serial.println("------EAST DOWN");
     // EAST and up -43.576560, 172.6378372
-    lat_deg = -43576560;
-    lon_deg = 1726378372;
-    alt_mm = 110000;
+    lat_deg = -43.576560;
+    lon_deg = 172.637837;
+    alt_mm = 1110000;
     break;
   case 2:
     Serial.println("-------WEST UP");
     // WEST and down -43.576489, 172.6320872
-    lat_deg = -43576489;
-    lon_deg = 1726320872;
-    alt_mm = 90000;
+    lat_deg = -43.576489;
+    lon_deg = 172.632087;
+    alt_mm = 1000;
     break;
   case 3:
     Serial.println("------SOUTH DOWN");
-    // SOUTH and up  -44.07942798770487, 172.63619786574031
-    lat_deg = -44079427;
-    lon_deg = 172636197;
-    alt_mm = 120000;
+    // SOUTH and up  06271685, 4098379
+    lat_deg = -43.589547;
+    lon_deg = 172.634925;
+    alt_mm = 210000;
     break;
   case 4:
     Serial.println("------NORTH UP");
-    // NORTH and down -43.578555, 172.635293
-    lat_deg = -43578555;
-    lon_deg = 172635293;
-    alt_mm = 80000;
+    // NORTH and down -42.67257331397684, 172.71425128060898
+    lat_deg = -42.672573;
+    lon_deg = 172.714251;
+    alt_mm = 50000;
     break;
   }
   test++;
 
-  bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
-  pan_angle = servo_movement_calculator(pan_servo, bearing, 5, 175, 180);
-  pan_servo.write(pan_angle);
+  // bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
+  // pan_angle = servo_movement_calculator(pan_servo, bearing, 2, 178, 90, false);
+  // pan_servo.write(pan_angle);
+  // Serial.print("pan angle");
+  // Serial.println(pan_angle);
   alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-  tilt_angle = servo_movement_calculator(tilt_servo, alt_angle, -85, 85, 90);
+  tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 10, 175, 90, false);
   tilt_servo.write(tilt_angle);
+  Serial.println(tilt_angle);
+  
+
 }
 
 /*----------------------SETUP-----------------------*/
@@ -117,7 +122,7 @@ void setup()
   {
     delay(500);
     Serial.print(".");
-    simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
+   // simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
   }
   /* confirm connection */
   Serial.println("");
@@ -166,6 +171,15 @@ void loop()
         switch (msg.msgid)
         {
         case MAVLINK_MSG_ID_GLOBAL_POSITION_INT:
+        {
+
+          //checks for a gps fix before calculations
+          if (gps_fix == false)
+          {
+            break;
+          }
+
+
           mavlink_global_position_int_t gpi;
           mavlink_msg_global_position_int_decode(&msg, &gpi);
           Serial.println("----GLOBAL_POSITION_INT------");
@@ -198,23 +212,37 @@ void loop()
             the relitive angles between them, those numbers are then sent to the servo motors
             with a bit of fangling to make up for the servo motors being a bit shit*/
             bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
-            pan_angle = servo_movement_calculator(pan_servo, bearing, 5, 175, 180);
+            pan_angle = servo_movement_calculator(pan_servo, bearing, 2, 178, 90, false);
             pan_servo.write(pan_angle);
+            Serial.print("pan Angle");
+            Serial.println(pan_angle);
 
             alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-            tilt_angle = servo_movement_calculator(tilt_servo, alt_angle, -85, 85, 90);
+            tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 10, 175, 90, false);
             tilt_servo.write(tilt_angle);
+            Serial.print("Tilt Angle");
+            Serial.println(tilt_angle);
           }
+          
           break;
+}
+          /*----------------------------GPS SATILITE CHECKER-----------------------------*/
+          /*this will check if the the drone has enough satilites to have a "3D fix" */
+          case MAVLINK_MSG_ID_GPS_RAW_INT:
+          {
+          mavlink_gps_raw_int_t gri;
+          mavlink_msg_gps_raw_int_decode(&msg, &gri);
+          Serial.println("--------GPS_RAW_INT----------");
+          Serial.print("Number of Satellites: "); Serial.println(gri.satellites_visible);
+          Serial.print("Fix type: "); Serial.println(gri.fix_type);
+          
+          // fix type 3 is a 3d fix https://mavlink.io/en/messages/common.html#GPS_FIX_TYPE
+          if (gri.fix_type == 3){
+          gps_fix = true; 
+          }
 
-          /*Get Raw satellite data */
-          // TODO: why is this giving me random values? Use this to only start main loop once enough sats have been found
-          // case MAVLINK_MSG_ID_GPS_RAW_INT:
-          // mavlink_gps_raw_int_t gri;
-          // mavlink_msg_gps_raw_int_decode(&msg, &gri);
-          // Serial.println("--------GPS_RAW_INT----------");
-          // Serial.print("Number of Satellites: "); Serial.println(gri.satellites_visible);
-          // Serial.print("Fix type: "); Serial.println(gri.fix_type);
+
+          break;}
         }
       }
     }
