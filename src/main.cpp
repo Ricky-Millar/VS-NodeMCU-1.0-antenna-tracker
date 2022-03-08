@@ -2,9 +2,10 @@
 #include <ESP8266WiFi.h>
 #include <Servo.h>
 #include "angle_calculator.h"
+#include "servo_conversions.h"
 #ifndef STASSID
-#define STASSID "tbs_tango2_E868E764BB2F"
-#define STAPSK "If you have a password put it here"
+#define STASSID "tbs_tango2_E868E764BB2F";
+#define STAPSK "If you have a password put it here";
 #endif
 
 const char *password = STAPSK;
@@ -15,6 +16,8 @@ const uint16_t port = 5760;
 // comp and sys ID are used in mavlink messages so each system knows who its talking too.
 const uint16_t CC_SYSID = 245;
 const uint16_t CC_COMPID = 1;
+double alt_angle;
+double bearing;
 double lat_deg;
 double lon_deg;
 double alt_mm;
@@ -84,35 +87,12 @@ void simulate_flight()
   }
   test++;
 
-  pan_angle = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON) + 180;
-  if (pan_angle >= 180)
-  {
-    pan_angle = 180;
-    Serial.println("SERVO PAN MAX");
-  }
-  if (pan_angle <= 5)
-  {
-    pan_angle = 5;
-    Serial.println("SERVO PAN LOW");
-  }
-
-  // tilt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-  // if (tilt_angle >= 80)
-  // {
-  //   tilt_angle = 80;
-  //   Serial.println("SERVO TILT MAX RANGE");
-  // }
-  // if (tilt_angle <= -80)
-  // {
-  //   tilt_angle = -80;
-  //   Serial.println("SERVO TILT MAX RANGE");
-  // }
-  // tilt_servo.write(lround(90 - tilt_angle));
-  pan_servo.write(lround(pan_angle));
-  // Serial.print("TILT COMMAND:");
-  // Serial.println(90 + tilt_angle);
-  Serial.print("PAM COMMAND:");
-  Serial.println(pan_angle);
+  bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
+  pan_angle = servo_movement_calculator(pan_servo, bearing, 5, 175, 180);
+  pan_servo.write(pan_angle);
+  alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
+  tilt_angle = servo_movement_calculator(tilt_servo, alt_angle, -85, 85, 90);
+  tilt_servo.write(tilt_angle);
 }
 
 /*----------------------SETUP-----------------------*/
@@ -137,7 +117,7 @@ void setup()
   {
     delay(500);
     Serial.print(".");
-    // simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
+    simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
   }
   /* confirm connection */
   Serial.println("");
@@ -194,12 +174,12 @@ void loop()
           double lat_deg = (double)gpi.lat / (double)10000000;
           double lon_deg = (double)gpi.lon / (double)10000000;
           double alt_mm = (double)gpi.alt;
-          Serial.print("lat: ");
-          printDouble(lat_deg, 1000000);
-          Serial.print("lon: ");
-          printDouble(lon_deg, 1000000);
-          Serial.print("alt: ");
-          printDouble(alt_mm, 1000000);
+          // Serial.print("lat: ");
+          // printDouble(lat_deg, 1000000);
+          // Serial.print("lon: ");
+          // printDouble(lon_deg, 1000000);
+          // Serial.print("alt: ");
+          // printDouble(alt_mm, 1000000);
 
           // Saves initial gps coordinates as a reference
           if (is_first_loop)
@@ -217,40 +197,13 @@ void loop()
             /*The initial coordinates are compared with the drones coordinates to calculate
             the relitive angles between them, those numbers are then sent to the servo motors
             with a bit of fangling to make up for the servo motors being a bit shit*/
-            // Serial.print("SERVO PAN:");
-            // Serial.println(pan_angle);
-            //  The servo accepts 0-180 as an input but only actualy moves 0-90 degrees, this makes 45 the equivilent of 0 degrees
-            pan_angle = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON) + 180;
-            if (pan_angle >= 180)
-            {
-              pan_angle = 180;
-              Serial.println("SERVO PAN MAX");
-            }
-            if (pan_angle <= 5)
-            {
-              pan_angle = 5;
-              Serial.println("SERVO PAN LOW");
-            }
+            bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
+            pan_angle = servo_movement_calculator(pan_servo, bearing, 5, 175, 180);
+            pan_servo.write(pan_angle);
 
-            tilt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-            // Serial.print("SERVO TILT:");
-            // Serial.println(tilt_angle);
-            if (tilt_angle >= 80)
-            {
-              tilt_angle = 80;
-              Serial.println("SERVO TILT MAX RANGE");
-            }
-            if (tilt_angle <= -80)
-            {
-              tilt_angle = -80;
-              Serial.println("SERVO TILT MAX RANGE");
-            }
-            tilt_servo.write(lround(90 - tilt_angle));
-            pan_servo.write(lround(pan_angle));
-            Serial.print("TILT COMMAND:");
-            Serial.println(90 + tilt_angle);
-            Serial.print("PAM COMMAND:");
-            Serial.println(pan_angle);
+            alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
+            tilt_angle = servo_movement_calculator(tilt_servo, alt_angle, -85, 85, 90);
+            tilt_servo.write(tilt_angle);
           }
           break;
 
