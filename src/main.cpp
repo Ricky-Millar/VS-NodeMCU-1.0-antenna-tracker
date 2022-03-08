@@ -37,8 +37,9 @@ Servo tilt_servo;
 void setup()
 {
   /*initiate servos*/
-  pan_servo.attach(2);  // D4
-  tilt_servo.attach(0); // D3
+  //TODO: Tune the miliseconds on the servos
+  pan_servo.attach(2,700, 2400);  // D4
+  tilt_servo.attach(0,700, 2400); // D3
   pan_servo.write(pan_angle);
   tilt_servo.write(tilt_angle);
   /*initiate serial*/
@@ -132,8 +133,8 @@ void loop()
             the relitive angles between them, those numbers are then sent to the servo motors
             with a bit of fangling to make up for the servo motors being a bit shit*/
             pan_angle = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
-            Serial.println("SERVO PAN:");
-            Serial.print(pan_angle);
+            Serial.print("SERVO PAN:");
+            Serial.println(pan_angle);
             // The servo accepts 0-180 as an input but only actualy moves 0-90 degrees, this makes 45 the equivilent of 0 degrees
             if (pan_angle >= 90)
             {
@@ -147,8 +148,8 @@ void loop()
             }
 
             tilt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-            Serial.println("SERVO TILT:");
-            Serial.print(tilt_angle);
+            Serial.print("SERVO TILT:");
+            Serial.println(tilt_angle);
             if (tilt_angle >= 90)
             {
               tilt_angle = 90;
@@ -159,8 +160,12 @@ void loop()
               tilt_angle = -90;
               Serial.println("SERVO TILT MAX RANGE");
             }
-            tilt_servo.write(lround(90 - tilt_angle * 2));
-            pan_servo.write(lround(90 + pan_angle * 2));
+            tilt_servo.write(lround(90 - tilt_angle));
+            pan_servo.write(lround(90 + pan_angle));
+            Serial.print("TILT COMMAND:");
+            Serial.println(90 - tilt_angle);
+            Serial.print("PAM COMMAND:");
+            Serial.println(90 + pan_angle);
           }
           break;
 

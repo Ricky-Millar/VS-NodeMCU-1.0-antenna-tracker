@@ -56,7 +56,7 @@ double getBearingAngle(double lat1, double long1, double lat2,
     bearing = 360 + bearing;
   }
   Serial.print("brng:");
-  Serial.print(bearing);
+  Serial.println(bearing);
   return bearing;
 }
 
@@ -83,9 +83,9 @@ double getAltAngle(double init_lat, double init_lon, double current_lat,
   long double R = 6371000; // in meters
 
   double distance = ans * R;
-  Serial.println("distance:");
+  Serial.print("distance:");
   Serial.println(distance);
-  Serial.println("delta-alt:");
+  Serial.print("delta-alt:");
   Serial.println(delta_alt);
   double AltAngle = atan(delta_alt / distance);
   return ConvertToDeg(AltAngle);
