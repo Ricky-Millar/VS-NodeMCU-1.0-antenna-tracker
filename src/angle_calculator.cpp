@@ -51,11 +51,7 @@ double getBearingAngle(double lat1, double long1, double lat2,
   lat2 = ConvertToRad(lat2);
   long2 = ConvertToRad(long2);
   double bearing = angleFromCoordinate(lat1, long1, lat2, long2);
-  if (bearing < 0)
-  {
-    bearing = 360 + bearing;
-  }
-  Serial.print("brng:");
+  Serial.print("brng: ");
   Serial.println(bearing);
   return bearing;
 }
