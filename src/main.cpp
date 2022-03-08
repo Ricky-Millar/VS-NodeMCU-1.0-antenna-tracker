@@ -96,8 +96,6 @@ void simulate_flight()
   tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 10, 175, 90, false);
   tilt_servo.write(tilt_angle);
   Serial.println(tilt_angle);
-  
-
 }
 
 /*----------------------SETUP-----------------------*/
@@ -122,7 +120,7 @@ void setup()
   {
     delay(500);
     Serial.print(".");
-   // simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
+    // simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
   }
   /* confirm connection */
   Serial.println("");
@@ -173,13 +171,11 @@ void loop()
         case MAVLINK_MSG_ID_GLOBAL_POSITION_INT:
         {
 
-          //checks for a gps fix before calculations
+          // checks for a gps fix before calculations
           if (gps_fix == false)
           {
             break;
           }
-
-
           mavlink_global_position_int_t gpi;
           mavlink_msg_global_position_int_decode(&msg, &gpi);
           Serial.println("----GLOBAL_POSITION_INT------");
@@ -188,12 +184,12 @@ void loop()
           double lat_deg = (double)gpi.lat / (double)10000000;
           double lon_deg = (double)gpi.lon / (double)10000000;
           double alt_mm = (double)gpi.alt;
-          // Serial.print("lat: ");
-          // printDouble(lat_deg, 1000000);
-          // Serial.print("lon: ");
-          // printDouble(lon_deg, 1000000);
-          // Serial.print("alt: ");
-          // printDouble(alt_mm, 1000000);
+          Serial.print("lat: ");
+          printDouble(lat_deg, 1000000);
+          Serial.print("lon: ");
+          printDouble(lon_deg, 1000000);
+          Serial.print("alt: ");
+          printDouble(alt_mm, 1000000);
 
           // Saves initial gps coordinates as a reference
           if (is_first_loop)
@@ -211,38 +207,41 @@ void loop()
             /*The initial coordinates are compared with the drones coordinates to calculate
             the relitive angles between them, those numbers are then sent to the servo motors
             with a bit of fangling to make up for the servo motors being a bit shit*/
+            Serial.println("--------SERVO INFO----------");
             bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
             pan_angle = servo_movement_calculator(pan_servo, bearing, 2, 178, 90, false);
             pan_servo.write(pan_angle);
-            Serial.print("pan Angle");
+            Serial.print("pan Angle:  ");
             Serial.println(pan_angle);
 
             alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
             tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 10, 175, 90, false);
             tilt_servo.write(tilt_angle);
-            Serial.print("Tilt Angle");
+            Serial.print("Tilt Angle:  ");
             Serial.println(tilt_angle);
           }
-          
+
           break;
-}
-          /*----------------------------GPS SATILITE CHECKER-----------------------------*/
-          /*this will check if the the drone has enough satilites to have a "3D fix" */
-          case MAVLINK_MSG_ID_GPS_RAW_INT:
-          {
+        }
+        /*----------------------------GPS SATILITE CHECKER-----------------------------*/
+        /*this will check if the the drone has enough satilites to have a "3D fix" */
+        case MAVLINK_MSG_ID_GPS_RAW_INT:
+        {
           mavlink_gps_raw_int_t gri;
           mavlink_msg_gps_raw_int_decode(&msg, &gri);
           Serial.println("--------GPS_RAW_INT----------");
-          Serial.print("Number of Satellites: "); Serial.println(gri.satellites_visible);
-          Serial.print("Fix type: "); Serial.println(gri.fix_type);
-          
+          Serial.print("Number of Satellites: ");
+          Serial.println(gri.satellites_visible);
+          Serial.print("Fix type: ");
+          Serial.println(gri.fix_type);
           // fix type 3 is a 3d fix https://mavlink.io/en/messages/common.html#GPS_FIX_TYPE
-          if (gri.fix_type == 3){
-          gps_fix = true; 
+          if (gri.fix_type == 3)
+          {
+            gps_fix = true;
           }
 
-
-          break;}
+          break;
+        }
         }
       }
     }

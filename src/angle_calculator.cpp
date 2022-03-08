@@ -79,13 +79,13 @@ double getAltAngle(double init_lat, double init_lon, double current_lat,
   long double R = 6371000; // in meters
 
   double distance = ans * R;
-  Serial.print("distance:");
+  Serial.print("distance:    ");
   Serial.println(distance);
-  Serial.print("delta-alt:");
+  Serial.print("delta-alt:  ");
   Serial.println(delta_alt);
   double alt_angle = atan(delta_alt / distance);
-  Serial.println(alt_angle);
-  Serial.print("alt_angle:");
+  Serial.print("alt_angle:   ");
+   Serial.println(alt_angle);
   return ConvertToDeg(alt_angle);
 }
 // EXPERIMENTAL combines magnetometer output with relative bearing
