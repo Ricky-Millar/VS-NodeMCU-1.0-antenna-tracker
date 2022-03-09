@@ -147,12 +147,12 @@ void loop()
   }
   /*sends a packet identifying the NodeMCU as a GCS and requesting positonal data*/
   // TODO: Work out why the message interval dosnt work. potentialy set interval command again
-  mavlink_msg_data_stream_pack(CC_SYSID, CC_COMPID, &msg,
-                               MAV_DATA_STREAM_POSITION, 50, 1);
+  mavlink_msg_data_stream_pack(CC_SYSID, CC_COMPID, &msg,MAV_DATA_STREAM_POSITION, 50, 1);
   len = mavlink_msg_to_send_buffer(buf, &msg);
   client.write(buf, len);
+  // Keeps looping whilst wifi is conected.
   Serial.println("Contacting Drone");
-  while (client.connected()) // Keeps looping whilst wifi is conected.
+  while (client.connected()) 
   {
     delay(50);
     /*---------------------------Message Handling-------------------------*/
