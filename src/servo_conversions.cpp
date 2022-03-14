@@ -13,7 +13,7 @@ It will take the measurements from the servos position
 taken from a 9DOF IMU as a reference of the trackers place-in-space
 */
 
-double servo_movement_calculator( double bearing, int min_pan, int max_pan, int offset, bool invert)
+double servo_movement_calculator(double bearing, int min_pan, int max_pan, int offset, bool invert)
 {
 
     if (bearing >= 0)
@@ -46,7 +46,7 @@ double servo_movement_calculator( double bearing, int min_pan, int max_pan, int 
     return bearing;
 }
 
-double servo_tilt_calculator( double bearing, int min_pan, int max_pan, int offset, bool invert)
+double servo_tilt_calculator(double bearing, int min_pan, int max_pan, int offset, bool invert)
 {
 
     bearing = bearing + offset;

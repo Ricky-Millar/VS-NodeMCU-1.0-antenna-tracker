@@ -1,12 +1,14 @@
 #include <math.h>
 #include <Arduino.h>
-struct position {
+struct position
+{
   double lat;
   double lon;
   double alt;
 };
 typedef struct position position;
-struct angles {
+struct angles
+{
   double alt;
   double ber;
 };
@@ -51,13 +53,12 @@ double angleFromCoordinate(double lat1, double long1, double lat2,
   return brng;
 }
 
-
-double getAltAngle(double current_lat,double  current_lon ,double current_alt ,double  init_lat ,double  init_lon , double  init_alt)
+double getAltAngle(double current_lat, double current_lon, double current_alt, double init_lat, double init_lon, double init_alt)
 {
   double delta_lat = current_lat - init_lat;
   double delta_lon = current_lon - init_lon;
   double delta_alt = (current_alt / 1000 - init_alt / 1000); // converts from mm to meters
- //I stole this off stack exchange, I have no idea how it works but it is better that what I tried before
+                                                             // I stole this off stack exchange, I have no idea how it works but it is better that what I tried before
   long double ans = pow(sin(delta_lat / 2), 2) +
                     cos(init_lat) * cos(current_lat) *
                         pow(sin(delta_lon / 2), 2);
@@ -74,23 +75,24 @@ double getAltAngle(double current_lat,double  current_lon ,double current_alt ,d
   Serial.println(delta_alt);
   double alt_angle = atan(delta_alt / distance);
   Serial.print("alt_angle:   ");
-   Serial.println(alt_angle);
+  Serial.println(alt_angle);
   return ConvertToDeg(alt_angle);
 }
 
-angles getAnglesFromPos(struct position current_pos, struct position initial_pos){
+angles getAnglesFromPos(struct position current_pos, struct position initial_pos)
+{
   angles angles;
   double init_lat = ConvertToRad(initial_pos.lat);
   double init_lon = ConvertToRad(initial_pos.lon);
   double current_lat = ConvertToRad(current_pos.lat);
   double current_lon = ConvertToRad(current_pos.lon);
-  angles.alt = getAltAngle(current_lat, current_lon,current_pos.alt, init_lat, init_lon, initial_pos.alt);
+  angles.alt = getAltAngle(current_lat, current_lon, current_pos.alt, init_lat, init_lon, initial_pos.alt);
   angles.ber = angleFromCoordinate(current_lat, current_lon, init_lat, init_lon);
   return angles;
 }
 // EXPERIMENTAL combines magnetometer output with relative bearing
 
 // double getTrueAngle(double relative_bearing, double mag_bearing){
-//PUT CODE THAT DOES SOMETHING COOL HERE//
+// PUT CODE THAT DOES SOMETHING COOL HERE//
 // }
 // Will probs need to unclude a calibration step
