@@ -88,13 +88,13 @@ void simulate_flight()
   }
   test++;
 
-  // bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
-  // pan_angle = servo_movement_calculator(pan_servo, bearing, 2, 178, 90, false);
-  // pan_servo.write(pan_angle);
-  // Serial.print("pan angle");
-  // Serial.println(pan_angle);
+  bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
+  pan_angle = servo_movement_calculator(pan_servo, bearing, 2, 175, 90, false);
+  pan_servo.write(pan_angle);
+  Serial.print("pan angle");
+  Serial.println(pan_angle);
   alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-  tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 10, 175, 90, false);
+  tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 5, 175, 90, false);
   tilt_servo.write(tilt_angle);
   Serial.println(tilt_angle);
 }
@@ -105,8 +105,8 @@ void setup()
 {
   /*initiate servos*/
   // TODO: Tune the miliseconds on the servos
-  pan_servo.attach(2, 500, 2400);  // D4  tests say 500-2500 but I get less buzz with 2400
-  tilt_servo.attach(0, 500, 2400); // D3
+  pan_servo.attach(2, 500, 2500);  // D4  tests say 500-2500 but I get less buzz with 2400
+  tilt_servo.attach(0, 500, 2500); // D3
   pan_servo.write(pan_angle);
   tilt_servo.write(tilt_angle);
   /*initiate serial*/
@@ -121,7 +121,7 @@ void setup()
   {
     delay(500);
     Serial.print(".");
-     //simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
+     simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
   }
   /* confirm connection */
   Serial.println("");
