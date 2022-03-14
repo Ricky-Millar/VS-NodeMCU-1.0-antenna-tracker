@@ -38,66 +38,79 @@ uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 Servo pan_servo;
 Servo tilt_servo;
 
-void simulate_flight()
-{
-  /*this is a test function that simulates a drone flying around my house to
-  test the motor control code with known values
+struct position {
+  double lat;
+  double lon;
+  double alt;
+}current_pos, initial_pos;
+struct angles {
+  double alt;
+  double ber;
+}current_angles;
+typedef struct angles angles;
+typedef struct position position;
 
-  this function is hiddin in the wifi part of the setup code, as it means I can loop
-  it withought a wifi connection */
-  delay(3000);
-  if (test >= 5)
-  {
-    test = 1;
-  }
-  // FOR TESTING WITH KNOWN VALUES
-  INITIAL_LAT = -43.576568;
-  INITIAL_LON = 172.635182;
-  INITIAL_ALT = 100000;
 
-  switch (test)
-  {
-  case 1:
-    Serial.println("------EAST DOWN");
-    // EAST and up -43.576560, 172.6378372
-    lat_deg = -43.576560;
-    lon_deg = 172.637837;
-    alt_mm = 1110000;
-    break;
-  case 2:
-    Serial.println("-------WEST UP");
-    // WEST and down -43.576489, 172.6320872
-    lat_deg = -43.576489;
-    lon_deg = 172.632087;
-    alt_mm = 1000;
-    break;
-  case 3:
-    Serial.println("------SOUTH DOWN");
-    // SOUTH and up  06271685, 4098379
-    lat_deg = -43.589547;
-    lon_deg = 172.634925;
-    alt_mm = 10000;
-    break;
-  case 4:
-    Serial.println("------NORTH UP");
-    // NORTH and down -42.67257331397684, 172.71425128060898
-    lat_deg = -42.672573;
-    lon_deg = 172.714251;
-    alt_mm = 500000;
-    break;
-  }
-  test++;
+// void simulate_flight()
+// {
+//   /*this is a test function that simulates a drone flying around my house to
+//   test the motor control code with known values
 
-  bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
-  pan_angle = servo_movement_calculator(pan_servo, bearing, 2, 175, 90, false);
-  pan_servo.write(pan_angle);
-  Serial.print("pan angle");
-  Serial.println(pan_angle);
-  alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-  tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 5, 175, 90, false);
-  tilt_servo.write(tilt_angle);
-  Serial.println(tilt_angle);
-}
+//   this function is hiddin in the wifi part of the setup code, as it means I can loop
+//   it withought a wifi connection */
+//   delay(3000);
+//   if (test >= 5)
+//   {
+//     test = 1;
+//   }
+//   // FOR TESTING WITH KNOWN VALUES
+//   INITIAL_LAT = -43.576568;
+//   INITIAL_LON = 172.635182;
+//   INITIAL_ALT = 100000;
+
+//   switch (test)
+//   {
+//   case 1:
+//     Serial.println("------EAST DOWN");
+//     // EAST and up -43.576560, 172.6378372
+//     lat_deg = -43.576560;
+//     lon_deg = 172.637837;
+//     alt_mm = 1110000;
+//     break;
+//   case 2:
+//     Serial.println("-------WEST UP");
+//     // WEST and down -43.576489, 172.6320872
+//     lat_deg = -43.576489;
+//     lon_deg = 172.632087;
+//     alt_mm = 1000;
+//     break;
+//   case 3:
+//     Serial.println("------SOUTH DOWN");
+//     // SOUTH and up  06271685, 4098379
+//     lat_deg = -43.589547;
+//     lon_deg = 172.634925;
+//     alt_mm = 10000;
+//     break;
+//   case 4:
+//     Serial.println("------NORTH UP");
+//     // NORTH and down -42.67257331397684, 172.71425128060898
+//     lat_deg = -42.672573;
+//     lon_deg = 172.714251;
+//     alt_mm = 500000;
+//     break;
+//   }
+//   test++;
+
+//   bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
+//   pan_angle = servo_movement_calculator(pan_servo, bearing, 2, 175, 90, false);
+//   pan_servo.write(pan_angle);
+//   Serial.print("pan angle");
+//   Serial.println(pan_angle);
+//   alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
+//   tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 5, 175, 90, false);
+//   tilt_servo.write(tilt_angle);
+//   Serial.println(tilt_angle);
+// }
 
 /*----------------------SETUP-----------------------*/
 
@@ -121,7 +134,7 @@ void setup()
   {
     delay(500);
     Serial.print(".");
-     simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
+    // simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
   }
   /* confirm connection */
   Serial.println("");
@@ -182,24 +195,22 @@ void loop()
 
           /*The incoming lat/lon data is an int (eg. 72.324234 deg is 72324234) so we
           convert it to a double and add the decimal by dy dividing by a big old number*/
-          double lat_deg = (double)gpi.lat / (double)10000000;
-          double lon_deg = (double)gpi.lon / (double)10000000;
-          double alt_mm = (double)gpi.alt;
+          current_pos.lat = (double)gpi.lat / (double)10000000;
+          current_pos.lon = (double)gpi.lon / (double)10000000;
+          current_pos.alt = (double)gpi.alt;
           if(DEBUG){
           Serial.println("----GLOBAL_POSITION_INT------");
           Serial.print("lat: ");
-          printDouble(lat_deg, 1000000);
+          printDouble(current_pos.lat, 1000000);
           Serial.print("lon: ");
-          printDouble(lon_deg, 1000000);
+          printDouble(current_pos.lon, 1000000);
           Serial.print("alt: ");
-          printDouble(alt_mm, 1000000);
+          printDouble(current_pos.alt, 1000000);
           }
           // Saves initial gps coordinates as a reference
           if (is_first_loop)
           {
-            INITIAL_LAT = lat_deg;
-            INITIAL_LON = lon_deg;
-            INITIAL_ALT = alt_mm;
+initial_pos = current_pos;
             is_first_loop = false;
             break;
           }
@@ -211,13 +222,11 @@ void loop()
             the relitive angles between them, those numbers are then sent to the servo motors
             with a bit of fangling to make up for the servo motors being a bit shit*/
 
-            bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
-            pan_angle = servo_movement_calculator(pan_servo, bearing, 5, 175, 90, false);
+            current_angles = getAnglesFromPos(current_pos, initial_pos);
+            pan_angle = servo_movement_calculator(current_angles.ber, 5, 175, 90, false);
+            tilt_angle = servo_tilt_calculator(current_angles.alt, 10, 175, 90, false);
+
             pan_servo.write(pan_angle);
-
-
-            alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-            tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 10, 175, 90, false);
             tilt_servo.write(tilt_angle);
             if (DEBUG){
             Serial.println("--------SERVO INFO----------");
@@ -250,7 +259,6 @@ void loop()
           Serial.print("Fix type: ");
           Serial.println(gri.fix_type);
           }
-
           break;
         }
         }
