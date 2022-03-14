@@ -8,6 +8,7 @@
 #define STASSID "tbs_tango2_E868E764BB2F";
 #define STAPSK "If you have a password put it here";
 #endif
+int old_sat_num;
 bool DEBUG = true;
 const char *password = STAPSK;
 const char *ssid = STASSID;
@@ -17,14 +18,6 @@ const uint16_t port = 5760;
 // comp and sys ID are used in mavlink messages so each system knows who its talking too.
 const uint16_t CC_SYSID = 245;
 const uint16_t CC_COMPID = 1;
-double alt_angle;
-double bearing;
-double lat_deg;
-double lon_deg;
-double alt_mm;
-double INITIAL_ALT = 0;
-double INITIAL_LAT = -43.576568;
-double INITIAL_LON = 172.635182;
 double pan_angle = 90;
 double tilt_angle = 90;
 bool is_first_loop = true;
@@ -38,18 +31,19 @@ uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 Servo pan_servo;
 Servo tilt_servo;
 
-struct position {
+struct position
+{
   double lat;
   double lon;
   double alt;
-}current_pos, initial_pos;
-struct angles {
+} current_pos, initial_pos;
+struct angles
+{
   double alt;
   double ber;
-}current_angles;
+} current_angles;
 typedef struct angles angles;
 typedef struct position position;
-
 
 // void simulate_flight()
 // {
@@ -161,12 +155,12 @@ void loop()
   }
   /*sends a packet identifying the NodeMCU as a GCS and requesting positonal data*/
   // TODO: Work out why the message interval dosnt work. potentialy set interval command again
-  mavlink_msg_data_stream_pack(CC_SYSID, CC_COMPID, &msg,MAV_DATA_STREAM_POSITION, 50, 1);
+  mavlink_msg_data_stream_pack(CC_SYSID, CC_COMPID, &msg, MAV_DATA_STREAM_POSITION, 50, 1);
   len = mavlink_msg_to_send_buffer(buf, &msg);
   client.write(buf, len);
   // Keeps looping whilst wifi is conected.
   Serial.println("Contacting Drone");
-  while (client.connected()) 
+  while (client.connected())
   {
     delay(50);
     /*---------------------------Message Handling-------------------------*/
@@ -198,19 +192,20 @@ void loop()
           current_pos.lat = (double)gpi.lat / (double)10000000;
           current_pos.lon = (double)gpi.lon / (double)10000000;
           current_pos.alt = (double)gpi.alt;
-          if(DEBUG){
-          Serial.println("----GLOBAL_POSITION_INT------");
-          Serial.print("lat: ");
-          printDouble(current_pos.lat, 1000000);
-          Serial.print("lon: ");
-          printDouble(current_pos.lon, 1000000);
-          Serial.print("alt: ");
-          printDouble(current_pos.alt, 1000000);
+          if (DEBUG)
+          {
+            Serial.println("----GLOBAL_POSITION_INT------");
+            Serial.print("lat: ");
+            printDouble(current_pos.lat, 1000000);
+            Serial.print("lon: ");
+            printDouble(current_pos.lon, 1000000);
+            Serial.print("alt: ");
+            printDouble(current_pos.alt, 1000000);
           }
           // Saves initial gps coordinates as a reference
           if (is_first_loop)
           {
-initial_pos = current_pos;
+            initial_pos = current_pos;
             is_first_loop = false;
             break;
           }
@@ -228,12 +223,13 @@ initial_pos = current_pos;
 
             pan_servo.write(pan_angle);
             tilt_servo.write(tilt_angle);
-            if (DEBUG){
-            Serial.println("--------SERVO INFO----------");
-            Serial.print("pan Angle:  ");
-            Serial.println(pan_angle);
-            Serial.print("Tilt Angle:  ");
-            Serial.println(tilt_angle);
+            if (DEBUG)
+            {
+              Serial.println("--------SERVO INFO----------");
+              Serial.print("pan Angle:  ");
+              Serial.println(pan_angle);
+              Serial.print("Tilt Angle:  ");
+              Serial.println(tilt_angle);
             }
           }
 
@@ -251,13 +247,14 @@ initial_pos = current_pos;
           {
             gps_fix = true;
           }
-          else if (DEBUG)
+          else if (DEBUG && gri.satellites_visible != old_sat_num)
           {
-          Serial.println("--------GPS_RAW_INT----------");
-          Serial.print("Number of Satellites: ");
-          Serial.println(gri.satellites_visible);
-          Serial.print("Fix type: ");
-          Serial.println(gri.fix_type);
+            Serial.println("--------GPS_RAW_INT----------");
+            Serial.print("Number of Satellites: ");
+            Serial.println(gri.satellites_visible);
+            Serial.print("Fix type: ");
+            Serial.println(gri.fix_type);
+            old_sat_num = gri.satellites_visible;
           }
           break;
         }
