@@ -13,6 +13,7 @@ I designed thsi servo mount to work with the servos I have at home, I'll include
 The code is all over the place at the moment, any questions let me know! I sure had a hard time working out how to get mavlink going through tcp. a lot of the librarys that say they can do it appear not to.
 
 Current state of tracker -> https://photos.app.goo.gl/4SRZVt3ofeJafCrg7 ( sorry the video is kinda crusty)
+In this video my drone is running betaflight, with just GPS, no magnetomiter or barometer, so the altitude measurments are way out, and at close range the tracker is having a hard time. Once I'm out of Covid isolation I will try to do some longer range videos.
 
 TIP FOR BETAFLIGHT:
 If you want to get real in the deep end...
