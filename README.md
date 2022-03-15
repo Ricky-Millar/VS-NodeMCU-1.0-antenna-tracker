@@ -18,7 +18,7 @@ In this video my drone is running betaflight, with just GPS, no magnetomiter or 
 
 
 
-##TIP FOR BETAFLIGHT:
+## TIP FOR BETAFLIGHT:
 If you want to get real in the deep end...
 
 If you are running betaflight firmware, The rate that gps is transmitted is locked at 2hz, there is no way to change this with mavlink. to fix this you have to make a custom build of betaflight. I use the docker method:
