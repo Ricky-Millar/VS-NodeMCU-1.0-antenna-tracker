@@ -21,18 +21,18 @@ In this video my drone is running betaflight, with just GPS, no magnetomiter or 
 # TIP FOR BETAFLIGHT:
 ## If you want to get real in the deep end...
 
-If you are running betaflight firmware, The rate that gps is transmitted is locked at 2hz, there is no way to change this with mavlink. to fix this you have to make a custom build of betaflight. I use the docker method:
+If you are running betaflight firmware, The rate that gps is transmitted is locked at 2hz, it works but is clunky and there is no way to change this with mavlink. To fix this you have to make a custom build of betaflight. I use the docker method:
 https://hub.docker.com/r/betaflight/betaflight-build
 
 https://www.youtube.com/watch?v=nr5SqZvpMRI&ab_channel=UAVTech
 
-Before building custom hex files, within "src\main\telemetry\mavlink.c" you should change:
+Before building custom hex files, within "src\main\telemetry\mavlink.c" in your betaflight repo, you should change:
  [MAV_DATA_STREAM_POSITION] = 20
 this will set the data stream to 20hz,
 
 ## Configuring U-Blox gps modules
 this next part is very experimental and might cause problems I havent found yet. but I am also playing aroudn with changing the data-rate between my ublox gps module and the FC. 
-to do this go into "src\main\io\gps.c"
+to do this go into "src\main\io\gps.c" in your betaflight repo,
 then find:
 ubloxSetNavRate(0xC8, 1, 1)
 the "0xC8" is 200, for 200ms between transmissions. I have set this to 50 (0x32).  (this is probably overkill but I want to see if anything goes wrong...)
