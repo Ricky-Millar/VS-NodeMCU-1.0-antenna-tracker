@@ -15,7 +15,10 @@ The code is all over the place at the moment, any questions let me know! I sure 
 Current state of tracker -> https://photos.app.goo.gl/4SRZVt3ofeJafCrg7 ( sorry the video is kinda crusty)
 In this video my drone is running betaflight, with just GPS, no magnetomiter or barometer, so the altitude measurments are way out, and at close range the tracker is having a hard time. Once I'm out of Covid isolation I will try to do some longer range videos.
 
-TIP FOR BETAFLIGHT:
+
+
+
+##TIP FOR BETAFLIGHT:
 If you want to get real in the deep end...
 
 If you are running betaflight firmware, The rate that gps is transmitted is locked at 2hz, there is no way to change this with mavlink. to fix this you have to make a custom build of betaflight. I use the docker method:
