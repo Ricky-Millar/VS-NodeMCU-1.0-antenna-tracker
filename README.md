@@ -12,6 +12,7 @@ I designed thsi servo mount to work with the servos I have at home, I'll include
 
 The code is all over the place at the moment, any questions let me know! I sure had a hard time working out how to get mavlink going through tcp. a lot of the librarys that say they can do it appear not to.
 
+Current state of tracker -> https://photos.app.goo.gl/4SRZVt3ofeJafCrg7 ( sorry the video is kinda crusty)
 
 TIP FOR BETAFLIGHT:
 If you want to get real in the deep end...
