@@ -13,8 +13,14 @@ It will take the measurements from the servos position
 taken from a 9DOF IMU as a reference of the trackers place-in-space
 */
 
-double servo_movement_calculator(double bearing, int min_pan, int max_pan, int offset, bool invert)
-{
+double servo_movement_calculator(double bearing, int min_pan, int max_pan, int offset, bool invert, double mag_offset)
+{    
+    
+    Serial.println("PRE CALCS--------");
+    Serial.print("bearing:  ");
+    Serial.println(bearing);
+    Serial.print("mag offset:  ");
+    Serial.println(mag_offset);
 
     if (bearing >= 0)
     {
@@ -25,12 +31,35 @@ double servo_movement_calculator(double bearing, int min_pan, int max_pan, int o
         bearing = (bearing + offset) * -1;
     }
 
-    Serial.print("offset pan:  ");
+if (mag_offset >= 180) {
+    mag_offset = ((mag_offset - 180)-180);
+}
+
+    Serial.println("POST CALCS--------");
+    Serial.print("bearing:  ");
+    Serial.println(bearing);
+    Serial.print("mag offset:  ");
+    Serial.println(mag_offset);
+
+bearing = bearing + mag_offset;
+
+
+
+if (bearing > 360){ bearing = bearing - 360;}
+
+if (bearing < 0){ bearing = 360 - bearing;}
+
+    Serial.println("PRE LIMIT--------");
+    Serial.print("bearing:  ");
+    Serial.println(bearing);
+
+
     Serial.println(bearing);
     if (invert == true)
     {
         bearing = 360 - bearing;
     }
+
     if (bearing >= max_pan)
     {
         bearing = max_pan;
@@ -42,7 +71,9 @@ double servo_movement_calculator(double bearing, int min_pan, int max_pan, int o
         bearing = min_pan;
         Serial.println("-x-x-x-SERVO PAN LOW-x-x-x-x");
     }
-
+    Serial.println("FINAL--------");
+    Serial.print("bearing:  ");
+    Serial.println(bearing);
     return bearing;
 }
 
