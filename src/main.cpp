@@ -1,7 +1,11 @@
 #include <mavlink.h>
+#include <ESP_EEPROM.h>
 #include <ESP8266WiFi.h>
 #include <Servo.h>
-//#include <Adafruit_BNO055.h>
+#include <Wire.h>
+#include <Adafruit_BNO055.h>
+#include <Adafruit_Sensor.h>
+
 #include "angle_calculator.h"
 #include "servo_conversions.h"
 #ifndef STASSID
@@ -18,6 +22,7 @@ const uint16_t port = 5760;
 // comp and sys ID are used in mavlink messages so each system knows who its talking too.
 const uint16_t CC_SYSID = 245;
 const uint16_t CC_COMPID = 1;
+double mag_offset = 0;
 double pan_angle = 90;
 double tilt_angle = 90;
 bool is_first_loop = true;
@@ -30,6 +35,16 @@ uint8_t len;
 uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 Servo pan_servo;
 Servo tilt_servo;
+// bno055 stuff
+unsigned long lastVcc;
+unsigned long lastInfo;
+ADC_MODE(ADC_VCC);
+#define BNO055_I2C_ADDRESS 0x28
+#define BNO055_MODE Adafruit_BNO055::OPERATION_MODE_NDOF
+#define CLOCK_STRETCH_LIMIT 1000
+bool bnoReady;
+Adafruit_BNO055 bno(55, BNO055_I2C_ADDRESS);
+adafruit_bno055_offsets_t calibrationData;
 
 struct position
 {
@@ -45,66 +60,103 @@ struct angles
 typedef struct angles angles;
 typedef struct position position;
 
-// void simulate_flight()
-// {
-//   /*this is a test function that simulates a drone flying around my house to
-//   test the motor control code with known values
 
-//   this function is hiddin in the wifi part of the setup code, as it means I can loop
-//   it withought a wifi connection */
-//   delay(3000);
-//   if (test >= 5)
-//   {
-//     test = 1;
-//   }
-//   // FOR TESTING WITH KNOWN VALUES
-//   INITIAL_LAT = -43.576568;
-//   INITIAL_LON = 172.635182;
-//   INITIAL_ALT = 100000;
+unsigned long proscess_Started = 0;
+const long proscess_interval = 100;
+unsigned long sim_Started = 0;
+const long sim_interval = 3000;
 
-//   switch (test)
-//   {
-//   case 1:
-//     Serial.println("------EAST DOWN");
-//     // EAST and up -43.576560, 172.6378372
-//     lat_deg = -43.576560;
-//     lon_deg = 172.637837;
-//     alt_mm = 1110000;
-//     break;
-//   case 2:
-//     Serial.println("-------WEST UP");
-//     // WEST and down -43.576489, 172.6320872
-//     lat_deg = -43.576489;
-//     lon_deg = 172.632087;
-//     alt_mm = 1000;
-//     break;
-//   case 3:
-//     Serial.println("------SOUTH DOWN");
-//     // SOUTH and up  06271685, 4098379
-//     lat_deg = -43.589547;
-//     lon_deg = 172.634925;
-//     alt_mm = 10000;
-//     break;
-//   case 4:
-//     Serial.println("------NORTH UP");
-//     // NORTH and down -42.67257331397684, 172.71425128060898
-//     lat_deg = -42.672573;
-//     lon_deg = 172.714251;
-//     alt_mm = 500000;
-//     break;
-//   }
-//   test++;
+void process_data()
+{
+  unsigned long currentMillis = millis();
+  if (currentMillis - proscess_Started >= proscess_interval) {
+    proscess_Started = currentMillis;
+  if (!is_first_loop)
+  {
+    /*---------------------------GETTING IMU DATA----------------------------------*/
+    const imu::Vector<3> &vec = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+    Serial.printf("%s: %f\n", "Mag Offset: ", vec.x());
+    // gets the osfett of the device to compensate for its rotation telative to north
+    double mag_offset = vec.x();
+    
+    /*----------------------------SERVO WANGLING------------------------------------*/
+    /*The initial coordinates and angle are compared with the drones coordinates to calculate
+    the relitive angles between them, those numbers are then sent to the servo motors
+    with a bit of fangling to make up for the servo motors being a bit shit*/
 
-//   bearing = getBearingAngle(lat_deg, lon_deg, INITIAL_LAT, INITIAL_LON);
-//   pan_angle = servo_movement_calculator(pan_servo, bearing, 2, 175, 90, false);
-//   pan_servo.write(pan_angle);
-//   Serial.print("pan angle");
-//   Serial.println(pan_angle);
-//   alt_angle = getAltAngle(INITIAL_LAT, INITIAL_LON, lat_deg, lon_deg, INITIAL_ALT, alt_mm);
-//   tilt_angle = servo_tilt_calculator(tilt_servo, alt_angle, 5, 175, 90, false);
-//   tilt_servo.write(tilt_angle);
-//   Serial.println(tilt_angle);
-// }
+    current_angles = getAnglesFromPos(current_pos, initial_pos);
+    pan_angle = servo_movement_calculator(current_angles.ber, 5, 175, 90, false, mag_offset);
+    tilt_angle = servo_tilt_calculator(current_angles.alt, 10, 175, 90, false);
+
+    pan_servo.write(pan_angle);
+    tilt_servo.write(tilt_angle);
+    if (DEBUG)
+    {
+      Serial.println("--------SERVO INFO----------");
+      Serial.print("pan Angle:  ");
+      Serial.println(pan_angle);
+      Serial.print("Tilt Angle:  ");
+      Serial.println(tilt_angle);
+    }
+  }
+  }
+}
+
+void simulate_flight()
+{
+  is_first_loop = false;
+  /*this is a test function that simulates a drone flying around my house to
+  test the motor control code with known values
+
+  this function is hiddin in the wifi part of the setup code, as it means I can loop
+  it withought a wifi connection */
+  delay(50);
+  if (test >= 5)
+  {
+    test = 1;
+  }
+  // FOR TESTING WITH KNOWN VALUES
+  initial_pos.lat = -43.576568;
+  initial_pos.lon = 172.635182;
+  initial_pos.alt = 100000;
+
+  switch (test)
+  {
+  case 1:
+    Serial.println("------EAST DOWN");
+    // EAST and up -43.576560, 172.6378372
+    current_pos.lat = -43.576560;
+    current_pos.lon = 172.637837;
+    current_pos.alt = 1110000;
+    break;
+  case 2:
+    Serial.println("-------WEST UP");
+    // WEST and down -43.576489, 172.6320872
+    current_pos.lat = -43.576489;
+    current_pos.lon = 172.632087;
+    current_pos.alt = 1000;
+    break;
+  case 3:
+    Serial.println("------SOUTH DOWN");
+    // SOUTH and up  06271685, 4098379
+    current_pos.lat = -43.589547;
+    current_pos.lon = 172.634925;
+    current_pos.alt = 10000;
+    break;
+  case 4:
+    Serial.println("------NORTH UP");
+    // NORTH and down -42.67257331397684, 172.71425128060898
+    current_pos.lat = -42.672573;
+    current_pos.lon = 172.714251;
+    current_pos.alt = 500000;
+    break;
+  }
+  unsigned long currentMillis = millis();
+  if (currentMillis - sim_Started >= sim_interval) {
+    sim_Started = currentMillis;
+  test++;}
+  process_data();
+}
 
 /*----------------------SETUP-----------------------*/
 
@@ -120,6 +172,97 @@ void setup()
   Serial.begin(115200);
   Serial.print("Connecting to ");
   Serial.println(ssid);
+
+  // BNO005 SETUP
+  lastInfo = lastVcc = millis();
+  Wire.pins(D1, D2);
+  // Enable clock stretching (required as the esp8266 has some funky stuff going on with I2C)
+  Wire.setClockStretchLimit(CLOCK_STRETCH_LIMIT);
+  // Sets and checks the BNO055 for Nine DOF mode, for orientation fusion data.
+  if (!bno.begin(Adafruit_BNO055::OPERATION_MODE_NDOF))
+  {
+    Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    bnoReady = false;
+  }
+  else
+  {
+    Serial.println("Initialized BNO055!");
+    bnoReady = true;
+  }
+
+  // LOAD FROM EEPROM This gets the previous bno055 calibration data, meaning the calibration proscess time can be cut down significantly
+  EEPROM.begin(sizeof(adafruit_bno055_offsets_t));
+  EEPROM.get(0, calibrationData);
+  bno.setSensorOffsets(calibrationData);
+
+  delay(200);
+   Serial.print("calibrationData.accel_offset_x = ");
+  Serial.println(calibrationData.accel_offset_x);
+  Serial.print("calibrationData.accel_offset_y = ");
+  Serial.println(calibrationData.accel_offset_y);
+  Serial.print("calibrationData.accel_offset_z = ");
+  Serial.println(calibrationData.accel_offset_z);
+  Serial.print("calibrationData.gyro_offset_x = ");
+  Serial.println(calibrationData.gyro_offset_x);
+  Serial.print("calibrationData.gyro_offset_y = ");
+  Serial.println(calibrationData.gyro_offset_y);
+  Serial.print("calibrationData.gyro_offset_z = ");
+  Serial.println(calibrationData.gyro_offset_z);
+  Serial.print("calibrationData.mag_offset_z = ");
+  Serial.println(calibrationData.accel_offset_z);
+  Serial.print("calibrationData.mag_offset_x = ");
+  Serial.println(calibrationData.gyro_offset_x);
+  Serial.print("calibrationData.mag_offset_y = ");
+  Serial.println(calibrationData.gyro_offset_y);
+  Serial.print("calibrationData.accel_radius = ");
+  Serial.println(calibrationData.accel_radius);
+  Serial.print("calibrationData.mag_radius = ");
+  Serial.println(calibrationData.mag_radius);
+
+  // Wait for full calibration of bno055
+  while (!bno.isFullyCalibrated())
+  {
+    Serial.println("spin me around");
+    uint8_t system, gyro, accel, mag;
+    system = gyro = accel = mag = 0;
+    bno.getCalibration(&system, &gyro, &accel, &mag);
+    Serial.println("Calibration state:");
+    Serial.printf("system: %d, gyro: %d, accel: %d, mag: %d\n",
+                  system, gyro, accel, mag);
+    delay(200);
+  }
+
+  // GET CALIBRATION DATA
+  bno.getSensorOffsets(calibrationData);
+  delay(200);
+  Serial.print("calibrationData.accel_offset_x = ");
+  Serial.println(calibrationData.accel_offset_x);
+  Serial.print("calibrationData.accel_offset_y = ");
+  Serial.println(calibrationData.accel_offset_y);
+  Serial.print("calibrationData.accel_offset_z = ");
+  Serial.println(calibrationData.accel_offset_z);
+  Serial.print("calibrationData.gyro_offset_x = ");
+  Serial.println(calibrationData.gyro_offset_x);
+  Serial.print("calibrationData.gyro_offset_y = ");
+  Serial.println(calibrationData.gyro_offset_y);
+  Serial.print("calibrationData.gyro_offset_z = ");
+  Serial.println(calibrationData.gyro_offset_z);
+  Serial.print("calibrationData.mag_offset_z = ");
+  Serial.println(calibrationData.accel_offset_z);
+  Serial.print("calibrationData.mag_offset_x = ");
+  Serial.println(calibrationData.gyro_offset_x);
+  Serial.print("calibrationData.mag_offset_y = ");
+  Serial.println(calibrationData.gyro_offset_y);
+  Serial.print("calibrationData.accel_radius = ");
+  Serial.println(calibrationData.accel_radius);
+  Serial.print("calibrationData.mag_radius = ");
+  Serial.println(calibrationData.mag_radius);
+  // SAVE Calibration TO EEPROM
+  bno.setSensorOffsets(calibrationData);
+  EEPROM.put(0, calibrationData);
+  boolean commit_ok = EEPROM.commitReset();
+  Serial.println((commit_ok) ? "Commit (Reset) OK" : "Commit failed");
+
   /*connect to wifi*/
   WiFi.mode(WIFI_STA); // STA = station, e.g. client
   WiFi.begin(ssid);    //(ssid, password); if you need a password
@@ -128,7 +271,7 @@ void setup()
   {
     delay(500);
     Serial.print(".");
-    // simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
+    //simulate_flight(); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TEST FUNCTION
   }
   /* confirm connection */
   Serial.println("");
@@ -162,7 +305,7 @@ void loop()
   Serial.println("Contacting Drone");
   while (client.connected())
   {
-    delay(50);
+    delay(100);
     /*---------------------------Message Handling-------------------------*/
     /*Checks if there are avaliable packets to be read, is so sends
     them to the mavlink library to be parsed, If the individual
@@ -170,6 +313,7 @@ void loop()
     while (client.available())
     {
       uint8_t ch = static_cast<char>(client.read());
+      process_data();
       if (mavlink_parse_char(MAVLINK_COMM_0, ch, &msg, &status))
       {
         // This switch will identify a message based on it's ID and then proscess it acordingly
@@ -209,32 +353,8 @@ void loop()
             is_first_loop = false;
             break;
           }
-          else
-          {
-
-            /*----------------------------SERVO WANGLING------------------------------------*/
-            /*The initial coordinates are compared with the drones coordinates to calculate
-            the relitive angles between them, those numbers are then sent to the servo motors
-            with a bit of fangling to make up for the servo motors being a bit shit*/
-
-            current_angles = getAnglesFromPos(current_pos, initial_pos);
-            pan_angle = servo_movement_calculator(current_angles.ber, 5, 175, 90, false);
-            tilt_angle = servo_tilt_calculator(current_angles.alt, 10, 175, 90, false);
-
-            pan_servo.write(pan_angle);
-            tilt_servo.write(tilt_angle);
-            if (DEBUG)
-            {
-              Serial.println("--------SERVO INFO----------");
-              Serial.print("pan Angle:  ");
-              Serial.println(pan_angle);
-              Serial.print("Tilt Angle:  ");
-              Serial.println(tilt_angle);
-            }
-          }
-
-          break;
         }
+
         /*----------------------------GPS SATILITE CHECKER-----------------------------*/
         /*this will check if the the drone has enough satilites to have a "3D fix" */
         case MAVLINK_MSG_ID_GPS_RAW_INT:
@@ -258,13 +378,16 @@ void loop()
           }
           break;
         }
+        break;
         }
       }
     }
   }
+
   /*if the code reaches this point, the conection has been lost and the loop will restart*/
+  process_data(); // keeps servo compensating for device movement even with no new data.
   Serial.println();
   Serial.println("-Connection to TX Interupted, Waiting for Bananas-");
   /*Waits to avoid Ddos-ing the TX*/
-  delay(30);
+  delay(300);
 }

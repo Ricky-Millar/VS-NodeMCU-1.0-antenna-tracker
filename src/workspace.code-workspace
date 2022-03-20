@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "..\\..\\..\\..\\..\\Desktop\\drone stuff\\NODEMCUTCPCLIENT"
+		},
+		{
+			"name": "VS NodeMCU 1.0 antenna tracker",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"xutility": "cpp"
+		}
+	}
+}
